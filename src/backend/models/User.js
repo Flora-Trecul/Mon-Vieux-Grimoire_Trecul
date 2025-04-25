@@ -6,6 +6,7 @@ const userSchema = mongoose.Schema({
   password: { type: String, required: true },
 });
 
+// Autre plugin compatible avec la dernière version Mongoose ?
 userSchema.plugin(uniqueValidator);
 
 module.exports = mongoose.model('User', userSchema);

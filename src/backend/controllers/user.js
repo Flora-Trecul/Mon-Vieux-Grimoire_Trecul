@@ -43,6 +43,7 @@ exports.login = (req, res) => {
               // configuration : durée pour l'expiration du token
               res.status(200).json({
                 userId: user._id,
+                // token aussi dans le dotenv
                 token: jwt.sign({ userId: user._id }, 'RANDOM_TOKEN_SECRET', {
                   expiresIn: '24h',
                 }),

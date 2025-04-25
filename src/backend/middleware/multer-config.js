@@ -18,10 +18,10 @@ const storage = multer.diskStorage({
     // Nom d'origine en remplaçant les éventuels whitespace par des undescore _
     // split renvoie un tableau de valeurs basé sur le séparateur ' ' (espace)
     // join regroupe le tableau en une string, avec un underscore _ entre les différentes valeurs
-    const name = file.originalname.split(' ').join('_');
+    const name = file.originalname.split(' ').join('_').split('.')[0];
     const ext = MIME_TYPES[file.mimetype];
     // Nom final : name + .ext avec un timeStamp pour être sûr que le nom est unique
-    callback(null, `${name}${Date.now()}.${ext}`);
+    callback(null, `${name}-${Date.now()}.${ext}`);
   },
 });
 

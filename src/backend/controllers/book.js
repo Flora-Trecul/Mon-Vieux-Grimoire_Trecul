@@ -2,7 +2,19 @@
 /* eslint-disable no-underscore-dangle */
 // On importe fs pour la suppression d'image + le schéma de données Book
 const fs = require('fs');
+const sharp = require('sharp');
 const Book = require('../models/Book');
+
+async function handleImg(req) {
+  const inputPath = req.file.path;
+  const outputPath = `images/${req.file.filename.split('.')[0]}.webp`;
+  try {
+    await sharp(inputPath).resize(405).webp({ quality: 20 }).toFile(outputPath);
+    await fs.promises.unlink(inputPath);
+  } catch {
+    throw new Error("Erreur de traitement de l'image");
+  }
+}
 
 exports.getAllBooks = (req, res) => {
   Book.find()
@@ -10,7 +22,7 @@ exports.getAllBooks = (req, res) => {
     .catch((error) => res.status(400).json({ error }));
 };
 
-exports.createBook = (req, res) => {
+exports.createBook = async (req, res) => {
   // On parse l'objet de la requête (c'est une string qu'on veut transformer en objet)
   const bookObject = JSON.parse(req.body.book);
   // On enlève le champ _id car Mongoose en génère un avec le mot-clé "new"
@@ -19,14 +31,15 @@ exports.createBook = (req, res) => {
   delete bookObject._userId;
 
   const book = new Book({
-    // opérateur Spread : on copie tous les champs du req.body (au lieu de "title: req.body.title")
+    // opérateur Spread : on copie tous les champs du body (au lieu de "title: req.body.title")
     ...bookObject,
     // On récupère l'userId qui a été attaché à l'objet request dans la propriété auth
     userId: req.auth.userId,
     // On génère l'URL de l'image à partir du nom de fichier créé avec multer
     // Protocole (http) + hote (localhost:3000) + dossier de stockage + nom de fichier multer
-    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
+    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename.split('.')[0]}.webp`,
   });
+  await handleImg(req, res, bookObject).catch((error) => res.status(400).json({ error }));
   book
     .save()
     .then(() => res.status(201).json({ message: 'Livre enregistré' }))
@@ -42,14 +55,18 @@ exports.getOneBook = (req, res) => {
     .catch((error) => res.status(404).json({ error }));
 };
 
-exports.modifyBook = (req, res) => {
+exports.modifyBook = async (req, res) => {
   // On vérifie s'il y a une image car le traitement n'est pas le même avec ou sans image
   const bookObject = req.file
     ? {
         ...JSON.parse(req.body.book),
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
       }
     : { ...req.body };
+
+  if (req.file) {
+    await handleImg(req, res, bookObject).catch((error) => res.status(400).json({ error }));
+    bookObject.imageUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename.split('.')[0]}.webp`;
+  }
 
   // Fonction pour modifier le livre
   function updateBook() {
