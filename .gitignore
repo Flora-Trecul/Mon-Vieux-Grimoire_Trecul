@@ -5,8 +5,12 @@ node_modules
 /.pnp
 .pnp.js
 /.idea
+
 # testing
 /coverage
+
+# user env
+.env
 
 # production
 /build

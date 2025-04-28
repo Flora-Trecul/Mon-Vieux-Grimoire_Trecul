@@ -1,7 +1,6 @@
 // Package HTTP natif de Node pour créer un serveur
 // require importe un module de base de Node (CommonJS) sans spécifier le chemin relatif
 const http = require('http');
-// On importe l'application Express et on définit le port utilisé
 const app = require('./app');
 
 // Fonction exécutée à chaque appel du serveur

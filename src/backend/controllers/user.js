@@ -23,35 +23,34 @@ exports.signup = (req, res) => {
 };
 
 exports.login = (req, res) => {
-  // Message sécuriaire par défaut si erreur d'authentification
-  // Il ne faut pas préciser si l'utilisateur n'est pas inscrit ou si le mot de passe est incorrect
-  const errorMsg = 'Identifiant et/ou mot de passe incorrect(s)';
+  // Ne jamais spécifier si l'user est introuvable ou le mot de passe incorrect (donc pas de 404)
   User.findOne({ email: req.body.email })
     .then((user) => {
-      if (user === null) {
-        res.status(401).json({ message: errorMsg });
+      if (!user) {
+        throw new Error('Request Error');
       } else {
-        bcrypt
-          .compare(req.body.password, user.password)
-          .then((valid) => {
-            if (!valid) {
-              res.status(401).json({ message: errorMsg });
-            } else {
-              // Arguments de jwt.sign :
-              // payload (données à encoder) : userId pour que le token corresponde bien à l'user
-              // clé pour l'encodage (chaîne aléatoire, longue et complexe lors de la production)
-              // configuration : durée pour l'expiration du token
-              res.status(200).json({
-                userId: user._id,
-                // token aussi dans le dotenv
-                token: jwt.sign({ userId: user._id }, 'RANDOM_TOKEN_SECRET', {
-                  expiresIn: '24h',
-                }),
-              });
-            }
-          })
-          .catch((error) => res.status(500).json({ error }));
+        bcrypt.compare(req.body.password, user.password).then((valid) => {
+          if (!valid) {
+            throw new Error('Request Error');
+          } else {
+            // Arguments de jwt.sign :
+            // payload (données à encoder) : userId pour que le token corresponde bien à l'user
+            // clé pour l'encodage (chaîne aléatoire, longue et complexe lors de la production)
+            // configuration : durée de validité du token
+            res.status(200).json({
+              userId: user._id,
+              token: jwt.sign({ userId: user._id }, process.env.TOKEN_KEY, {
+                expiresIn: '12h',
+              }),
+            });
+          }
+        });
       }
     })
-    .catch((error) => res.status(500).json({ error }));
+    .catch((error) => {
+      if (error.message === 'Request Error') {
+        res.status(400).json({ error });
+      }
+      res.status(500).json({ error });
+    });
 };
