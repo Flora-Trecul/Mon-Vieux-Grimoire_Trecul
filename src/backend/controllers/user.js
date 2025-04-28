@@ -50,7 +50,8 @@ exports.login = (req, res) => {
     .catch((error) => {
       if (error.message === 'Request Error') {
         res.status(400).json({ error });
+      } else {
+        res.status(500).json({ error });
       }
-      res.status(500).json({ error });
     });
 };
