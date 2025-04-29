@@ -4,6 +4,7 @@
 const express = require('express');
 const auth = require('../middleware/auth');
 const multer = require('../middleware/multer-config');
+const { createBookLimiter, updateBookLimiter } = require('../middleware/limit');
 const bookCtrl = require('../controllers/book');
 
 const router = express.Router();
@@ -11,10 +12,10 @@ const router = express.Router();
 router.get('/', bookCtrl.getAllBooks);
 // D'abord auth pour accéder à la route si l'utilisateur est identifié
 // + multer pour spécifier le format de la requête puis appliquer les instructions du controller
-router.post('/', auth, multer, bookCtrl.createBook);
+router.post('/', auth, multer, createBookLimiter, bookCtrl.createBook);
 router.get('/bestrating', bookCtrl.getThreeBestBooks);
 router.get('/:id', bookCtrl.getOneBook);
-router.put('/:id', auth, multer, bookCtrl.modifyBook);
+router.put('/:id', auth, multer, updateBookLimiter, bookCtrl.modifyBook);
 router.delete('/:id', auth, bookCtrl.deleteBook);
 router.post('/:id/rating', auth, bookCtrl.rateBook);
 

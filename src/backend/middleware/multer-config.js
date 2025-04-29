@@ -26,6 +26,16 @@ const storage = multer.diskStorage({
   },
 });
 
-// On exporte le module avec la méthode multer appliquée à l'objet storage
+const fileFilter = (req, file, cb) => {
+  // On vérifie si le mimeType du fichier est bien l'une des clés de MIME_TYPES
+  // Si oui, on traite le fichier, sinon on renvoie une erreur et on ne traite pas le fichier
+  if (Object.keys(MIME_TYPES).includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(), false);
+  }
+};
+
+// On exporte le module avec la méthode multer appliquée à storage et fileFilter
 // + single pour préciser qu'on traite un unique fichier de type image
-module.exports = multer({ storage }).single('image');
+module.exports = multer({ storage, fileFilter }).single('image');

@@ -3,23 +3,34 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const passwordSchema = require('../middleware/password-config');
 
 exports.signup = (req, res) => {
-  // Syntaxe : bcrypt.hash(string à crypter, nombre de fois où on exécute l'algorithme)
-  bcrypt
-    .hash(req.body.password, 10)
-    .then((hash) => {
+  // On vérifie que le mot de passe est sécurisé selon le schéma password-validator configuré
+  try {
+    const validPassword = passwordSchema.validate(req.body.password);
+    if (!validPassword) {
+      throw new Error('Insecure Password');
+    }
+    // Syntaxe : bcrypt.hash(string à crypter, nombre de fois où on exécute l'algorithme)
+    bcrypt.hash(req.body.password, 10).then((hash) => {
       const user = new User({
         email: req.body.email,
         password: hash,
       });
-      user
-        .save()
-        .then(() => res.status(201).json({ message: 'Utilisateur enregistré' }))
-        .catch((error) => res.status(400).json({ error }));
-    })
-    // Erreur 500 car erreur de serveur
-    .catch((error) => res.status(500).json({ error }));
+      user.save().then(() => res.status(201).json({ message: 'Utilisateur enregistré' }));
+    });
+  } catch (error) {
+    if (error.message === 'Insecure Password') {
+      // Message pour le mot de passe non sécurisé en attendant une alerte côté frontend
+      res.status(400).json({
+        message:
+          'Le mot de passe doit comporter au moins 1 majuscule, 1 minuscule, 1 chiffre et 1 symbole.',
+      });
+    } else {
+      res.status(500).json({ error });
+    }
+  }
 };
 
 exports.login = (req, res) => {

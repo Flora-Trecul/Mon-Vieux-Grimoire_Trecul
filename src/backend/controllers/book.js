@@ -45,17 +45,10 @@ exports.deleteBook = (req, res) => {
     });
 };
 
-// Fonction pour vérifier le fichier uploadé et optimiser l'image dans createBook et updateBook
+// Fonction pour optimiser l'image dans createBook et updateBook
 async function handleImg(req) {
+  // On crée une nouvelle image optimisée et on supprime l'image d'origine
   const inputPath = req.file.path;
-  // On vérifie d'abord que le fichier uploadé est bien une image
-  const mimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  if (!mimeTypes.includes(req.file.mimetype)) {
-    // Si le fichier n'est pas au bon format, on le supprime et on renvoie une erreur
-    await fs.promises.unlink(inputPath);
-    throw new Error('Not an Image');
-  }
-  // On crée une image optimisée et on supprime l'image d'origine
   try {
     const outputPath = `images/${req.file.filename.split('.')[0]}.webp`;
     await sharp(inputPath).resize(405).webp({ quality: 20 }).toFile(outputPath);
@@ -67,7 +60,7 @@ async function handleImg(req) {
 
 exports.createBook = async (req, res) => {
   try {
-    // On appelle la fonction vérifier le fichier et optimiser l'image
+    // On appelle la fonction pour optimiser l'image
     await handleImg(req);
 
     // On parse l'objet de la requête (c'est une string qu'on veut transformer en objet)
@@ -100,18 +93,10 @@ exports.createBook = async (req, res) => {
   }
 };
 
+// eslint-disable-next-line consistent-return
 exports.modifyBook = async (req, res) => {
-  // Fonction pour modifier le livre
-  function updateBook(bookObject) {
-    // updateOne a deux paramètres : l'objet à modifier et la nouvelle version de l'objet
-    // On précise deux fois que l'id doit correspondre à celui de l'URL
-    // car l'ID dans le corps de la requête peut ne pas être le bon
-    Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
-      .then(res.status(200).json({ message: 'Livre modifié' }))
-      .catch((error) => res.status(500).json({ error }));
-  }
-
   try {
+    // On récupère le body de la requête et on traite l'image s'il y en a une
     const bookObject = req.file ? { ...JSON.parse(req.body.book) } : { ...req.body };
     if (req.file) {
       await handleImg(req);
@@ -122,32 +107,33 @@ exports.modifyBook = async (req, res) => {
     delete bookObject._userId;
 
     // On cherche l'objet déjà existant dans la base de données
-    Book.findOne({ _id: req.params.id })
-      .then(async (book) => {
-        // On vérifie que l'userId est le même que celui utilisé pour créer le livre
-        if (book.userId !== req.auth.userId) {
-          throw new Error('Unauthorized');
-        } else {
-          // On supprime l'ancienne image si l'utilisateur en a mis une nouvelle
-          if (req.file) {
-            const filename = book.imageUrl.split('/images/')[1];
-            await fs.promises.unlink(`images/${filename}`);
-          }
-          updateBook(bookObject);
-        }
-      })
-      .catch((error) => {
-        if (error.message === 'Unauthorized') {
-          res.status(403).json({ error });
-        } else {
-          res.status(404).json({ error });
-        }
-      });
+    const book = await Book.findOne({ _id: req.params.id });
+    if (!book) {
+      throw new Error('Not Found');
+    }
+    // On vérifie que l'userId est le même que celui utilisé pour créer le livre
+    if (book.userId !== req.auth.userId) {
+      throw new Error('Unauthorized');
+    }
+    // On supprime l'ancienne image si l'utilisateur en a mis une nouvelle puis on update le livre
+    if (req.file) {
+      const filename = book.imageUrl.split('/images/')[1];
+      await fs.promises.unlink(`images/${filename}`);
+    }
+    // updateOne prend 2 paramètres : objet à modifier + nouvelle version
+    // On remet req.params.id car l'_id du body pourrait ne pas être le bon
+    await Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id });
+    res.status(200).json({ message: 'Livre modifié' });
   } catch (error) {
-    if (error.message === 'Not an Image') {
-      res.status(400).json({ error });
-    } else {
-      res.status(500).json({ error });
+    switch (error.message) {
+      case 'Unauthorized':
+        res.status(403).json({ error });
+        break;
+      case 'Not Found':
+        res.status(404).json({ error });
+        break;
+      default:
+        res.status(403).json({ error });
     }
   }
 };
