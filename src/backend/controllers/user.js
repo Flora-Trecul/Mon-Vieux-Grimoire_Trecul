@@ -3,7 +3,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const passwordSchema = require('../middleware/password-config');
+const passwordSchema = require('../models/password-config');
 
 exports.signup = (req, res) => {
   // On vérifie que le mot de passe est sécurisé selon le schéma password-validator configuré

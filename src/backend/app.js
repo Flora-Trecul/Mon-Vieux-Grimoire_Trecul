@@ -31,8 +31,6 @@ app.use((req, res, next) => {
     'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization',
   );
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  // Gestion des requêtes de pré-vérification (OPTIONS) qui renvoient une erreur CORS
-  //   res.sendStatus(204);
   next();
 });
 
