@@ -40,5 +40,14 @@ app.use('/api/auth', userRoutes);
 // Et qu'elle renvoie au sous-dossier images dans le répertoire du serveur (_dirname)
 app.use('/images', express.static(path.join(__dirname, 'images')));
 
+// Middleware pour gérer les erreurs en dehors des controllers (erreurs Multer notamment)
+// eslint-disable-next-line no-unused-vars, consistent-return
+app.use((error, req, res, next) => {
+  if (error.message === 'Not an Image') {
+    return res.status(400).json({ error });
+  }
+  res.status(500).json({ error });
+});
+
 // On exporte l'application en tant que module pour l'utiliser dans le fichier du serveur Node
 module.exports = app;

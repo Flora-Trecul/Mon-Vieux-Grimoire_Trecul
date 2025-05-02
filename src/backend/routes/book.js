@@ -1,4 +1,3 @@
-/* eslint-disable no-underscore-dangle */
 // On importe Express + les middlewares d'authentification et gestion de fichier
 // On importe les fonctions liées aux routes book + on définit un routeur pour ces routes
 const express = require('express');

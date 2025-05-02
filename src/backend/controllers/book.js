@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 /* eslint-disable no-underscore-dangle */
 // On importe fs pour la suppression d'image + le schéma de données Book
 const fs = require('fs');
@@ -47,9 +46,9 @@ exports.deleteBook = (req, res) => {
 
 // Fonction pour optimiser l'image dans createBook et updateBook
 async function handleImg(req) {
-  // On crée une nouvelle image optimisée et on supprime l'image d'origine
-  const inputPath = req.file.path;
   try {
+    // On crée une nouvelle image optimisée et on supprime l'image d'origine
+    const inputPath = req.file.path;
     const outputPath = `images/${req.file.filename.split('.')[0]}.webp`;
     await sharp(inputPath).resize(405).webp({ quality: 20 }).toFile(outputPath);
     await fs.promises.unlink(inputPath);
@@ -60,11 +59,20 @@ async function handleImg(req) {
 
 exports.createBook = async (req, res) => {
   try {
+    // On parse l'objet de la requête (c'est une string qu'on veut transformer en objet)
+    const bookObject = JSON.parse(req.body.book);
+
+    // On vérifie que le livre n'existe pas déjà dans la base de données
+    // Si c'est un doublon, on supprime l'image uploadée et on renvoie une erreur
+    const exists = await Book.findOne({ title: bookObject.title, author: bookObject.author });
+    if (exists) {
+      await fs.promises.unlink(`images/${req.file.filename}`);
+      throw new Error('Duplicate');
+    }
+
     // On appelle la fonction pour optimiser l'image
     await handleImg(req);
 
-    // On parse l'objet de la requête (c'est une string qu'on veut transformer en objet)
-    const bookObject = JSON.parse(req.body.book);
     // On enlève le champ _id car Mongoose en génère un avec le mot-clé "new"
     delete bookObject._id;
     // On enlève le champ userId car on doit utiliser l'userId du token par sécurité
@@ -85,7 +93,7 @@ exports.createBook = async (req, res) => {
     // On ajoute le livre à la base de données avec save()
     book.save().then(() => res.status(201).json({ message: 'Livre enregistré' }));
   } catch (error) {
-    if (error.message === 'Not an Image') {
+    if (error.message === 'Duplicate') {
       res.status(400).json({ error });
     } else {
       res.status(500).json({ error });
@@ -93,7 +101,6 @@ exports.createBook = async (req, res) => {
   }
 };
 
-// eslint-disable-next-line consistent-return
 exports.modifyBook = async (req, res) => {
   try {
     // On récupère le body de la requête et on traite l'image s'il y en a une
@@ -125,15 +132,12 @@ exports.modifyBook = async (req, res) => {
     await Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id });
     res.status(200).json({ message: 'Livre modifié' });
   } catch (error) {
-    switch (error.message) {
-      case 'Unauthorized':
-        res.status(403).json({ error });
-        break;
-      case 'Not Found':
-        res.status(404).json({ error });
-        break;
-      default:
-        res.status(403).json({ error });
+    if (error.message === 'Unauthorized') {
+      res.status(403).json({ error });
+    } else if (error.message === 'Not Found') {
+      res.status(404).json({ error });
+    } else {
+      res.status(500).json({ error });
     }
   }
 };

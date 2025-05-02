@@ -32,7 +32,7 @@ const fileFilter = (req, file, cb) => {
   if (Object.keys(MIME_TYPES).includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(), false);
+    cb(new Error('Not an Image'), false);
   }
 };
 
