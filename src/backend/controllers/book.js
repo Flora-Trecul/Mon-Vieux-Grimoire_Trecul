@@ -6,14 +6,28 @@ const Book = require('../models/Book');
 
 exports.getAllBooks = (req, res) => {
   Book.find()
-    .then((books) => res.status(200).json(books))
+    .then((books) => {
+      books.forEach((book) => {
+        book.imageUrl.replace(
+          'http://localhost:4000',
+          'https://mon-vieux-grimoire-trecul.onrender.com',
+        );
+      });
+      res.status(200).json(books);
+    })
     .catch((error) => res.status(404).json({ error }));
 };
 
 exports.getOneBook = (req, res) => {
   // findOne pour trouver le livre de la base de données ayant le même id qu'en paramètre
   Book.findOne({ _id: req.params.id })
-    .then((book) => res.status(200).json(book))
+    .then((book) => {
+      book.imageUrl.replace(
+        'http://localhost:4000',
+        'https://mon-vieux-grimoire-trecul.onrender.com',
+      );
+      res.status(200).json(book);
+    })
     .catch((error) => res.status(404).json({ error }));
 };
 
